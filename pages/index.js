@@ -1,192 +1,107 @@
-import streamlit as st
-import json, os, uuid
-from datetime import datetime
+import React, { useState, useEffect } from 'react';
+import Head from 'next/head';
+import engineData from './sovereign_engine.json';
 
-# =========================
-# إعداد النظام
-# =========================
-st.set_page_config(page_title="منصة المنصور السيادية", layout="centered")
+export default function SovereignMobilePro() {
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState('');
+  const [credits, setCredits] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [selectedTrack, setSelectedTrack] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminPass, setAdminPass] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
 
-DB_FILE = "db.json"
+  // نظام حفظ الرصيد في ذاكرة المتصفح
+  useEffect(() => {
+    const savedUser = localStorage.getItem('sovereign_user');
+    if (savedUser) {
+      setUser(savedUser);
+      setCredits(parseInt(localStorage.getItem('sovereign_credits') || '1'));
+    }
+  }, []);
 
-def load_db():
-    if not os.path.exists(DB_FILE):
-        with open(DB_FILE, "w") as f:
-            json.dump({
-                "users": {},
-                "codes": {"VIP2026": 20},
-                "used_codes": []
-            }, f)
-    with open(DB_FILE, "r") as f:
-        return json.load(f)
+  const handleLogin = () => {
+    if (email) {
+      setUser(email);
+      const startCredits = 1; // تقرير واحد مجاني
+      setCredits(startCredits);
+      localStorage.setItem('sovereign_user', email);
+      localStorage.setItem('sovereign_credits', startCredits.toString());
+    }
+  };
 
-def save_db(data):
-    with open(DB_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+  const handleGenerate = () => {
+    if (credits > 0) {
+      setShowReport(true);
+      const newCredits = credits - 1;
+      setCredits(newCredits);
+      localStorage.setItem('sovereign_credits', newCredits.toString());
+    }
+  };
 
-db = load_db()
+  if (!user) {
+    return (
+      <div dir="rtl" style={{ background: "#0a192f", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "white", padding: "20px" }}>
+        <div style={{ textAlign: "center", width: "100%" }}>
+          <h1 style={{ color: "#d4af37", marginBottom: "30px" }}>🏛️ منصة المنصور السيادية</h1>
+          <input type="email" placeholder="أدخل بريدك الإلكتروني" onChange={(e)=>setEmail(e.target.value)} style={{ width: "100%", padding: "15px", borderRadius: "10px", border: "none", marginBottom: "15px" }} />
+          <button onClick={handleLogin} style={{ width: "100%", padding: "15px", background: "#d4af37", border: "none", borderRadius: "10px", fontWeight: "900" }}>دخول آمن ✅</button>
+        </div>
+      </div>
+    );
+  }
 
-# =========================
-# session
-# =========================
-if "login" not in st.session_state:
-    st.session_state.login = False
-if "email" not in st.session_state:
-    st.session_state.email = ""
-if "answers" not in st.session_state:
-    st.session_state.answers = {}
+  return (
+    <div dir="rtl" style={{ background: "#f4f7f9", minHeight: "100vh", fontFamily: "Cairo, sans-serif" }}>
+      <Head><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet" /></Head>
+      
+      {/* البار العلوي مع الرصيد */}
+      <div style={{ background: "#0a192f", color: "white", padding: "15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: "14px" }}>👤 {user}</span>
+        <span style={{ background: "#d4af37", color: "#0a192f", padding: "5px 15px", borderRadius: "20px", fontWeight: "900" }}>🪙 الرصيد: {credits}</span>
+      </div>
 
-# =========================
-# تسجيل الدخول
-# =========================
-def login():
-    st.title("🏛️ منصة المنصور")
-    email = st.text_input("البريد الإلكتروني")
+      <main style={{ padding: "20px" }}>
+        {credits <= 0 && !showReport ? (
+          <div style={{ background: "white", padding: "30px", borderRadius: "20px", textAlign: "center", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+            <h2 style={{ color: "red" }}>⚠️ نفد الرصيد!</h2>
+            <p>لقد استخدمت تقريرك المجاني. للحصول على المزيد، تواصل معنا:</p>
+            <a href="https://wa.me/967770000000" style={{ display: "block", background: "#25D366", color: "white", padding: "15px", borderRadius: "10px", textDecoration: "none", fontWeight: "900", marginBottom: "20px" }}>👉 اطلب رصيد عبر واتساب</a>
+            <hr />
+            <input type="text" placeholder="أدخل كود الشحن (MS-XXXX)" style={{ width: "100%", padding: "12px", marginBottom: "10px", borderRadius: "8px", border: "1px solid #ddd" }} />
+            <button onClick={() => { setCredits(5); alert("تم شحن 5 تقارير!"); }} style={{ width: "100%", padding: "12px", background: "#0a192f", color: "white", borderRadius: "8px" }}>تفعيل الكود 🚀</button>
+          </div>
+        ) : !showReport ? (
+          <div style={{ background: "white", padding: "20px", borderRadius: "20px" }}>
+             <h3>🛡️ محرك التقارير السيادية</h3>
+             <p>اختر الركيزة والمسار وابدأ توليد تقريرك الاستراتيجي فوراً.</p>
+             <textarea rows="5" placeholder="أدخل البيانات الميدانية..." style={{ width: "100%", padding: "15px", borderRadius: "10px", border: "1px solid #ddd", marginBottom: "15px" }}></textarea>
+             <button onClick={handleGenerate} style={{ width: "100%", padding: "20px", background: "#d4af37", color: "#0a192f", fontWeight: "900", border: "none", borderRadius: "15px" }}>توليد التقرير النهائي 📄</button>
+          </div>
+        ) : (
+          <div style={{ background: "white", padding: "30px", borderTop: "10px solid #d4af37" }}>
+             <h2>📄 تقرير استراتيجي جاهز</h2>
+             <p>بناءً على البيانات المقدمة، نوصي بتعزيز آليات الرقابة...</p>
+             <button onClick={() => setShowReport(false)} style={{ marginTop: "20px", padding: "10px", width: "100%" }}>رجوع</button>
+          </div>
+        )}
 
-    if st.button("دخول"):
-        if email:
-            if email not in db["users"]:
-                db["users"][email] = {
-                    "balance": 1,  # تجربة مجانية
-                    "created": str(datetime.now())
-                }
-                save_db(db)
-
-            st.session_state.login = True
-            st.session_state.email = email
-            st.rerun()
-
-# =========================
-# واتساب
-# =========================
-def whatsapp():
-    st.warning("🚫 انتهت التجربة المجانية")
-    st.markdown("### تفعيل الحساب:")
-    st.markdown(
-        "[📱 تواصل عبر واتساب](https://wa.me/967774575749?text=أريد%20تفعيل%20منصة%20المنصور)"
-    )
-
-# =========================
-# إدخال كود
-# =========================
-def activate_code():
-    st.subheader("🔑 تفعيل كود")
-    code = st.text_input("أدخل الكود")
-
-    if st.button("تفعيل"):
-        if code in db["codes"] and code not in db["used_codes"]:
-            value = db["codes"][code]
-            db["users"][st.session_state.email]["balance"] += value
-            db["used_codes"].append(code)
-            save_db(db)
-            st.success(f"تم إضافة {value} تقرير")
-        else:
-            st.error("كود غير صالح")
-
-# =========================
-# توليد تقرير (بدون AI خارجي)
-# =========================
-def generate_report(data):
-    return f"""
-📊 التقرير التنفيذي
-
-الملخص:
-تم تحليل البيانات المدخلة، وتبين ما يلي:
-
-- الوضع الحالي: {data.get('q1','')}
-- التحديات: {data.get('q2','')}
-- الأسباب: {data.get('q3','')}
-
-🔍 التحليل:
-هناك فجوة تشغيلية تحتاج إلى تحسين.
-
-🎯 التوصيات:
-- تحسين الأداء
-- تقليل الهدر
-- رفع الكفاءة
-
-📈 KPI:
-- زيادة الإنتاجية
-- تقليل التكاليف
-
----
-
-🧠 البرومبت:
-
-اكتب تقرير احترافي بناءً على:
-{data}
-"""
-
-# =========================
-# المنصة
-# =========================
-def platform():
-    user = db["users"][st.session_state.email]
-    balance = user["balance"]
-
-    st.info(f"رصيدك: {balance} تقرير")
-
-    if balance <= 0:
-        whatsapp()
-        activate_code()
-        return
-
-    st.subheader("📋 أدخل البيانات")
-
-    q1 = st.text_area("الوضع الحالي")
-    q2 = st.text_area("التحديات")
-    q3 = st.text_area("الأسباب")
-
-    if st.button("توليد التقرير"):
-        st.session_state.answers = {
-            "q1": q1,
-            "q2": q2,
-            "q3": q3
-        }
-
-        report = generate_report(st.session_state.answers)
-        st.success("تم إنشاء التقرير")
-
-        st.text_area("📄 التقرير", report, height=300)
-
-        # خصم الرصيد
-        db["users"][st.session_state.email]["balance"] -= 1
-        save_db(db)
-
-# =========================
-# الإدارة
-# =========================
-def admin():
-    st.title("🛠️ الإدارة")
-
-    password = st.text_input("كلمة المرور", type="password")
-
-    if password == "Mansour@2026":
-
-        st.subheader("➕ توليد كود")
-
-        value = st.selectbox("عدد التقارير", [5, 10, 20, 50])
-
-        if st.button("توليد"):
-            code = "MS-" + uuid.uuid4().hex[:6].upper()
-            db["codes"][code] = value
-            save_db(db)
-            st.success(code)
-
-        st.subheader("👥 المستخدمين")
-        st.write(db["users"])
-
-# =========================
-# التنقل
-# =========================
-if not st.session_state.login:
-    login()
-else:
-    page = st.sidebar.radio("القائمة", ["المنصة", "تفعيل", "الإدارة"])
-
-    if page == "المنصة":
-        platform()
-    elif page == "تفعيل":
-        activate_code()
-    elif page == "الإدارة":
-        admin()
+        {/* قسم الإدارة السري */}
+        <div style={{ marginTop: "50px", opacity: 0.5 }}>
+          <button onClick={() => setAdminMode(!adminMode)} style={{ background: "none", border: "none", fontSize: "12px" }}>الإدارة ⚙️</button>
+          {adminMode && (
+            <div style={{ padding: "15px", background: "#eee", borderRadius: "10px", marginTop: "10px" }}>
+              <input type="password" placeholder="كلمة المرور" onChange={(e)=>setAdminPass(e.target.value)} style={{ width: "100%", marginBottom: "10px" }} />
+              {adminPass === "Mansour@2026" && (
+                <button onClick={() => setGeneratedCode("MS-" + Math.random().toString(36).substr(2, 6).toUpperCase())} style={{ background: "black", color: "white", padding: "10px", width: "100%" }}>توليد كود شحن رصيد</button>
+              )}
+              {generatedCode && <div style={{ marginTop: "10px", fontWeight: "900", color: "blue" }}>الكود: {generatedCode}</div>}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

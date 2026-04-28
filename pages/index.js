@@ -1,121 +1,192 @@
-import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
-import engineData from './sovereign_engine.json';
+import streamlit as st
+import json, os, uuid
+from datetime import datetime
 
-export default function SovereignFinalForce() {
-  const [activeTab, setActiveTab] = useState('platform');
-  const [currentStep, setCurrentStep] = useState(0); 
-  const [selectedPillar, setSelectedPillar] = useState(null);
-  const [selectedTrack, setSelectedTrack] = useState(null);
-  const [formData, setFormData] = useState({});
-  const [showFinalReport, setShowFinalReport] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+# =========================
+# إعداد النظام
+# =========================
+st.set_page_config(page_title="منصة المنصور السيادية", layout="centered")
 
-  useEffect(() => { setIsClient(true); }, []);
-  if (!isClient) return null;
+DB_FILE = "db.json"
 
-  return (
-    <div dir="rtl" style={{ backgroundColor: "#f8f9fa", minHeight: "100vh", paddingBottom: "110px" }}>
-      <Head>
-        <title>منصة المنصور السيادية</title>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet" />
-      </Head>
+def load_db():
+    if not os.path.exists(DB_FILE):
+        with open(DB_FILE, "w") as f:
+            json.dump({
+                "users": {},
+                "codes": {"VIP2026": 20},
+                "used_codes": []
+            }, f)
+    with open(DB_FILE, "r") as f:
+        return json.load(f)
 
-      <style>{`
-        * { font-family: 'Cairo', sans-serif !important; }
-        .card { background:white; padding:25px; border-radius:25px; box-shadow:0 10px 40px rgba(0,0,0,0.05); margin-bottom:20px; border:1px solid #eee; cursor:pointer; width:100%; text-align:right; }
-        .card:hover { border-color: #d4af37; background: #fffdf5; transform: translateY(-3px); }
-        .hint { background:#f0fdf4; border-right:5px solid #22c55e; padding:15px; border-radius:12px; margin-bottom:15px; font-size:14px; color:#166534; }
-        .report-page { background: #fff; padding: 50px; border: 1px solid #ddd; border-top: 15px solid #0a192f; line-height: 1.8; }
-        @media print { .no-print { display: none !important; } .report-page { padding: 0; border: none; } }
-      `}</style>
+def save_db(data):
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f, indent=2)
 
-      <div className="no-print" style={{ background: "#0a192f", color: "white", padding: "20px", textAlign: "center", borderBottom: "5px solid #d4af37" }}>
-        <h2 style={{ fontSize: "18px", fontWeight: 900, margin: 0 }}>🏛️ محرك التقارير السيادية (النسخة المكتملة)</h2>
-      </div>
+db = load_db()
 
-      <main style={{ maxWidth: "750px", margin: "30px auto", padding: "0 20px" }}>
-        
-        {activeTab === 'platform' && !showFinalReport && (
-          <div>
-            {currentStep === 0 && (
-              <>
-                <h3 style={{ fontWeight: 900, marginBottom: "30px" }}>🛡️ اختر الركيزة الاستراتيجية (الخمس الركائز):</h3>
-                {engineData?.pillars?.map(p => (
-                  <button key={p.id} onClick={() => { setSelectedPillar(p); setCurrentStep(1); }} className="card"><b>{p.name}</b></button>
-                ))}
-              </>
-            )}
+# =========================
+# session
+# =========================
+if "login" not in st.session_state:
+    st.session_state.login = False
+if "email" not in st.session_state:
+    st.session_state.email = ""
+if "answers" not in st.session_state:
+    st.session_state.answers = {}
 
-            {currentStep === 1 && selectedPillar && (
-              <>
-                <h3 style={{ color: "#d4af37", fontWeight: 900 }}>{selectedPillar.name}</h3>
-                {selectedPillar.tracks?.length > 0 ? (
-                  selectedPillar.tracks.map(t => (
-                    <button key={t.id} onClick={() => { setSelectedTrack(t); setCurrentStep(2); }} className="card"><b>{t.name}</b></button>
-                  ))
-                ) : (
-                  <div className="card">قريباً سيتم تفعيل المسارات...</div>
-                )}
-                <button onClick={() => setCurrentStep(0)} style={{ width: "100%", padding: "15px", borderRadius: "15px", border: "1px solid #ddd" }}>تراجع</button>
-              </>
-            )}
+# =========================
+# تسجيل الدخول
+# =========================
+def login():
+    st.title("🏛️ منصة المنصور")
+    email = st.text_input("البريد الإلكتروني")
 
-            {currentStep === 2 && selectedTrack && (
-              <>
-                <h3 style={{ color: "#0a192f", fontWeight: 900 }}>{selectedTrack.name}</h3>
-                {selectedTrack.questions?.map((q, idx) => (
-                  <div key={idx} style={{ marginBottom: "35px" }}>
-                    <label style={{ fontWeight: 900, display: "block", marginBottom: "10px" }}>{idx + 1}. {q.q}</label>
-                    {/* هنا تظهر الأمثلة التي ظننت أنها حُذفت */}
-                    <div className="hint">💡 مثال استرشادي: {q.example}</div>
-                    <textarea 
-                      onChange={(e) => setFormData({...formData, [`${selectedTrack.id}_${idx}`]: e.target.value})}
-                      rows="4" 
-                      style={{ width: "100%", padding: "15px", borderRadius: "15px", border: "1px solid #cbd5e1" }} 
-                      placeholder="أدخل البيانات الميدانية هنا..."
-                    />
-                  </div>
-                ))}
-                <div style={{ display: "flex", gap: "15px" }}>
-                  <button onClick={() => setCurrentStep(1)} style={{ flex: 1, padding: "20px", borderRadius: "15px", background: "#f1f5f9", border: "none" }}>السابق</button>
-                  <button onClick={() => setShowFinalReport(true)} style={{ flex: 2, padding: "20px", background: "#d4af37", color: "#0a192f", borderRadius: "15px", fontWeight: 900, border: "none" }}>توليد التقرير الجاهز 📄</button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+    if st.button("دخول"):
+        if email:
+            if email not in db["users"]:
+                db["users"][email] = {
+                    "balance": 1,  # تجربة مجانية
+                    "created": str(datetime.now())
+                }
+                save_db(db)
 
-        {showFinalReport && (
-          <div className="report-page">
-            <div style={{ textAlign: "center", borderBottom: "2px solid #0a192f", paddingBottom: "20px", marginBottom: "30px" }}>
-              <h2 style={{ color: "#0a192f", margin: 0 }}>تقرير استراتيجي احترافي</h2>
-              <p>المسار: {selectedTrack.name}</p>
-            </div>
-            {selectedTrack.questions.map((q, idx) => (
-              <div key={idx} style={{ marginBottom: "25px" }}>
-                <h4 style={{ color: "#d4af37", marginBottom: "5px" }}>● {q.q}</h4>
-                <p style={{ background: "#f9f9f9", padding: "15px", borderRadius: "10px", borderRight: "4px solid #0a192f" }}>
-                  {formData[`${selectedTrack.id}_${idx}`] || "لم يتم توفير بيانات."}
-                </p>
-              </div>
-            ))}
-            <div className="no-print" style={{ marginTop: "40px", display: "flex", gap: "10px" }}>
-              <button onClick={() => setShowFinalReport(false)} style={{ flex: 1, padding: "15px", background: "#eee", border: "none", borderRadius: "10px" }}>تعديل البيانات</button>
-              <button onClick={() => window.print()} style={{ flex: 2, padding: "15px", background: "#0a192f", color: "white", border: "none", borderRadius: "10px", fontWeight: 900 }}>طباعة / PDF</button>
-            </div>
-          </div>
-        )}
-      </main>
+            st.session_state.login = True
+            st.session_state.email = email
+            st.rerun()
 
-      <nav className="no-print" style={{ position: "fixed", bottom: 0, width: "100%", height: "90px", background: "white", display: "flex", borderTop: "1px solid #eee", zIndex: 1000 }}>
-        <button onClick={() => { setShowFinalReport(false); setActiveTab('platform'); setCurrentStep(0); }} style={{ flex: 1, border: "none", background: "none", color: activeTab === 'platform' ? "#0a192f" : "#adb5bd" }}>
-          <div style={{ fontSize: "25px" }}>🏠</div><div style={{ fontSize: "11px", fontWeight: 900 }}>المنصة</div>
-        </button>
-        <button onClick={() => setActiveTab('pricing')} style={{ flex: 1, border: "none", background: "none", color: activeTab === 'pricing' ? "#0a192f" : "#adb5bd" }}>
-          <div style={{ fontSize: "25px" }}>💳</div><div style={{ fontSize: "11px", fontWeight: 900 }}>الباقات</div>
-        </button>
-      </nav>
-    </div>
-  );
-}
+# =========================
+# واتساب
+# =========================
+def whatsapp():
+    st.warning("🚫 انتهت التجربة المجانية")
+    st.markdown("### تفعيل الحساب:")
+    st.markdown(
+        "[📱 تواصل عبر واتساب](https://wa.me/967774575749?text=أريد%20تفعيل%20منصة%20المنصور)"
+    )
+
+# =========================
+# إدخال كود
+# =========================
+def activate_code():
+    st.subheader("🔑 تفعيل كود")
+    code = st.text_input("أدخل الكود")
+
+    if st.button("تفعيل"):
+        if code in db["codes"] and code not in db["used_codes"]:
+            value = db["codes"][code]
+            db["users"][st.session_state.email]["balance"] += value
+            db["used_codes"].append(code)
+            save_db(db)
+            st.success(f"تم إضافة {value} تقرير")
+        else:
+            st.error("كود غير صالح")
+
+# =========================
+# توليد تقرير (بدون AI خارجي)
+# =========================
+def generate_report(data):
+    return f"""
+📊 التقرير التنفيذي
+
+الملخص:
+تم تحليل البيانات المدخلة، وتبين ما يلي:
+
+- الوضع الحالي: {data.get('q1','')}
+- التحديات: {data.get('q2','')}
+- الأسباب: {data.get('q3','')}
+
+🔍 التحليل:
+هناك فجوة تشغيلية تحتاج إلى تحسين.
+
+🎯 التوصيات:
+- تحسين الأداء
+- تقليل الهدر
+- رفع الكفاءة
+
+📈 KPI:
+- زيادة الإنتاجية
+- تقليل التكاليف
+
+---
+
+🧠 البرومبت:
+
+اكتب تقرير احترافي بناءً على:
+{data}
+"""
+
+# =========================
+# المنصة
+# =========================
+def platform():
+    user = db["users"][st.session_state.email]
+    balance = user["balance"]
+
+    st.info(f"رصيدك: {balance} تقرير")
+
+    if balance <= 0:
+        whatsapp()
+        activate_code()
+        return
+
+    st.subheader("📋 أدخل البيانات")
+
+    q1 = st.text_area("الوضع الحالي")
+    q2 = st.text_area("التحديات")
+    q3 = st.text_area("الأسباب")
+
+    if st.button("توليد التقرير"):
+        st.session_state.answers = {
+            "q1": q1,
+            "q2": q2,
+            "q3": q3
+        }
+
+        report = generate_report(st.session_state.answers)
+        st.success("تم إنشاء التقرير")
+
+        st.text_area("📄 التقرير", report, height=300)
+
+        # خصم الرصيد
+        db["users"][st.session_state.email]["balance"] -= 1
+        save_db(db)
+
+# =========================
+# الإدارة
+# =========================
+def admin():
+    st.title("🛠️ الإدارة")
+
+    password = st.text_input("كلمة المرور", type="password")
+
+    if password == "Mansour@2026":
+
+        st.subheader("➕ توليد كود")
+
+        value = st.selectbox("عدد التقارير", [5, 10, 20, 50])
+
+        if st.button("توليد"):
+            code = "MS-" + uuid.uuid4().hex[:6].upper()
+            db["codes"][code] = value
+            save_db(db)
+            st.success(code)
+
+        st.subheader("👥 المستخدمين")
+        st.write(db["users"])
+
+# =========================
+# التنقل
+# =========================
+if not st.session_state.login:
+    login()
+else:
+    page = st.sidebar.radio("القائمة", ["المنصة", "تفعيل", "الإدارة"])
+
+    if page == "المنصة":
+        platform()
+    elif page == "تفعيل":
+        activate_code()
+    elif page == "الإدارة":
+        admin()
